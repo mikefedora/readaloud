@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ReadAloud</title>
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ReadAloud">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root {
+    --bg: #111418; --panel: #1a1f26; --panel2: #232a33; --line: #2e3742;
+    --text: #e9edf1; --muted: #93a0ad; --accent: #f0b35a; --accent-ink: #1b1305;
+    --danger: #ef7a6c; --ok: #7fd1a0;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 90px) env(safe-area-inset-left); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 14px; }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  header h1 span { color: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  label.lbl { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 6px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 16px; }
+  textarea { min-height: 180px; resize: vertical; }
+  button { font: inherit; border: 0; border-radius: 10px; padding: 11px 16px; cursor: pointer;
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
+  button.ghost { background: transparent; }
+  button.danger { color: var(--danger); }
+  button:disabled { opacity: .45; cursor: default; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .row > .grow { flex: 1 1 160px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .small { font-size: 13px; }
+  .note { background: #2a2416; border: 1px solid #4a3d1f; color: #f3d9a8; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+  .err { color: var(--danger); font-size: 14px; white-space: pre-wrap; }
+  .okc { color: var(--ok); font-size: 14px; }
+  .tabs { display: flex; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 14px; }
+  .tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 9px 6px; }
+  .tabs button.on { background: var(--panel2); color: var(--text); }
+  .hidden { display: none !important; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; font-size: 15px; }
+  .check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--accent); }
+  /* voices */
+  .voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 300px; overflow: auto; padding: 2px; }
+  .voice { text-align: left; padding: 9px 10px; border-radius: 10px; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+  .voice.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .voice b { display: block; font-size: 15px; }
+  .voice i { font-style: normal; font-size: 12px; color: var(--muted); }
+  .voice .pv { padding: 6px 8px; font-size: 13px; border-radius: 8px; flex: none; }
+  /* library */
+  .doc { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .doc:first-of-type { border-top: 0; }
+  .doc .t { flex: 1; min-width: 0; }
+  .doc .t b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar { height: 4px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 6px; position: relative; }
+  .bar .gen { position: absolute; inset: 0 auto 0 0; background: #3b4552; }
+  .bar .pl { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+  /* reader text */
+  .reading { max-height: 42vh; overflow: auto; font-size: 17px; line-height: 1.6; padding-right: 4px; }
+  .reading p { margin: 0 0 12px; color: var(--muted); cursor: pointer; border-radius: 6px; padding: 2px 4px; }
+  .reading p.cur { color: var(--text); background: #232a33; }
+  .reading p.ready::before { content: "● "; color: #3e6b52; font-size: 10px; vertical-align: middle; }
+  /* player dock */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(20,24,29,.97); border-top: 1px solid var(--line);
+    padding: 10px 14px calc(env(safe-area-inset-bottom) + 10px); backdrop-filter: blur(10px); z-index: 10; }
+  .dock .in { max-width: 720px; margin: 0 auto; }
+  .dock .ttl { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock .st { font-size: 12px; color: var(--muted); min-height: 16px; }
+  .ctrls { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; }
+  .ctrls button { padding: 8px 10px; min-width: 44px; background: transparent; border: 0; font-size: 15px; }
+  .ctrls .play { width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 22px; }
+  .ctrls select { width: auto; padding: 7px 8px; font-size: 15px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -2px; margin-right: 4px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Read<span>Aloud</span></h1>
+    <span class="muted small" id="keyBadge"></span>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button data-tab="new" class="on">New</button>
+    <button data-tab="lib">Library</button>
+    <button data-tab="now">Playing</button>
+    <button data-tab="set">Settings</button>
+  </div>
+
+  <!-- NEW -->
+  <section id="tab-new">
+    <div class="card hidden" id="needKey">
+      <div class="note">First add your free Gemini API key in <b>Settings</b>. It only takes a minute.</div>
+    </div>
+    <div class="card">
+      <h2>What to read</h2>
+      <label class="lbl" for="title">Title (optional)</label>
+      <input type="text" id="title" placeholder="e.g. Attachment and the therapeutic alliance">
+      <label class="lbl" for="text">Paste text</label>
+      <textarea id="text" placeholder="Paste an article, chapter or notes here…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="pickFile">Open PDF or text file</button>
+        <input type="file" id="file" accept=".pdf,.txt,.md,application/pdf,text/plain" class="hidden">
+        <span class="muted small" id="fileMsg"></span>
+      </div>
+      <div class="muted small" id="count" style="margin-top:8px"></div>
+      <details style="margin-top:10px">
+        <summary>Clean-up options for academic papers</summary>
+        <label class="check"><input type="checkbox" id="optRefs" checked> Skip citation brackets like [5,7] and (Smith et al., 2019)</label>
+        <label class="check"><input type="checkbox" id="optCut" checked> Stop at the "References" / "Bibliography" section</label>
+        <label class="check"><input type="checkbox" id="optUrls" checked> Skip web links and DOIs</label>
+      </details>
+      <div class="note small" style="margin-top:12px">On the free Gemini tier, Google may use the text you send to improve its products. Use it for published articles and books, never for client notes or anything confidential.</div>
+    </div>
+
+    <div class="card">
+      <h2>Who reads it</h2>
+      <div class="voices" id="voices"></div>
+      <label class="lbl" for="style">Reading style</label>
+      <select id="style">
+        <option value="calm">Calm, clear narrator (good for papers)</option>
+        <option value="warm">Warm and friendly</option>
+        <option value="lively">Lively, engaging</option>
+        <option value="none">Plain: no style instruction</option>
+      </select>
+      <div class="row" style="margin-top:16px">
+        <button class="primary grow" id="go">Create &amp; start listening</button>
+      </div>
+      <div class="err" id="goErr"></div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="tab-lib" class="hidden">
+    <div class="card">
+      <h2>Your library</h2>
+      <div id="libList"></div>
+      <p class="muted small">Parts you've already generated are saved on this device, so you can listen to them again offline (on the metro, say) without using any more of your free allowance.</p>
+    </div>
+  </section>
+
+  <!-- NOW -->
+  <section id="tab-now" class="hidden">
+    <div class="card">
+      <h2 id="nowTitle">Nothing playing</h2>
+      <div class="muted small" id="nowMeta"></div>
+      <div class="reading" id="reading" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="genAll">Prepare all parts now (for offline)</button>
+        <button id="stopGen" class="ghost hidden">Stop preparing</button>
+      </div>
+      <p class="muted small">Tap any paragraph block to jump there. A green dot means that part is ready on this device.</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-set" class="hidden">
+    <div class="card">
+      <h2>Gemini API key</h2>
+      <ol class="muted small" style="padding-left:18px;margin-top:0">
+        <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with your Google account.</li>
+        <li>Tap <b>Create API key</b> and copy it.</li>
+        <li>Paste it below and tap <b>Save &amp; test</b>.</li>
+      </ol>
+      <input type="password" id="key" placeholder="Paste your API key" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="saveKey">Save &amp; test</button>
+        <button id="showKey" class="ghost">Show</button>
+        <button id="clearKey" class="ghost danger">Remove</button>
+      </div>
+      <div id="keyMsg" style="margin-top:8px"></div>
+      <p class="muted small">The key is saved only in this browser on this device. Add it once on each of your phones and tablet.</p>
+    </div>
+    <div class="card">
+      <h2>Voice model</h2>
+      <select id="model"></select>
+      <p class="muted small">Picked automatically when you test the key. Change it only if one model stops working.</p>
+      <label class="lbl" for="chunk">Part length</label>
+      <select id="chunk">
+        <option value="1500">Short parts: starts faster, uses more requests</option>
+        <option value="3000" selected>Medium (recommended)</option>
+        <option value="4500">Long parts: fewer requests, slower to start</option>
+      </select>
+    </div>
+    <div class="card">
+      <h2>Storage</h2>
+      <div class="muted small" id="storeMsg"></div>
+      <div class="row" style="margin-top:10px"><button class="danger" id="wipe">Delete all saved audio</button></div>
+    </div>
+  </section>
+</div>
+
+<!-- DOCK -->
+<div class="dock hidden" id="dock">
+  <div class="in">
+    <div class="ttl" id="dTitle"></div>
+    <div class="st" id="dStatus"></div>
+    <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Position in this part">
+    <div class="ctrls">
+      <button id="bPrev" title="Previous part" aria-label="Previous part">⏮</button>
+      <button id="bBack" title="Back 15 seconds" aria-label="Back 15 seconds">↺15</button>
+      <button class="play" id="bPlay" aria-label="Play">▶</button>
+      <button id="bFwd" title="Forward 30 seconds" aria-label="Forward 30 seconds">30↻</button>
+      <button id="bNext" title="Next part" aria-label="Next part">⏭</button>
+      <select id="speed" aria-label="Speed">
+        <option>0.8</option><option selected>1</option><option>1.1</option><option>1.25</option>
+        <option>1.4</option><option>1.5</option><option>1.75</option><option>2</option><option>2.5</option>
+      </select>
+    </div>
+  </div>
+</div>
+<audio id="audio" preload="auto" playsinline></audio>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+
+// ---------- Voices (Gemini prebuilt) ----------
+const VOICES = [
+  ['Charon','Informative','m'],['Kore','Firm','f'],['Sadaltager','Knowledgeable','m'],['Sulafat','Warm','f'],
+  ['Iapetus','Clear','m'],['Erinome','Clear','f'],['Schedar','Even','m'],['Vindemiatrix','Gentle','f'],
+  ['Algieba','Smooth','m'],['Despina','Smooth','f'],['Gacrux','Mature','f'],['Rasalgethi','Informative','m'],
+  ['Achernar','Soft','f'],['Achird','Friendly','m'],['Aoede','Breezy','f'],['Umbriel','Easy-going','m'],
+  ['Callirrhoe','Easy-going','f'],['Alnilam','Firm','m'],['Orus','Firm','m'],['Autonoe','Bright','f'],
+  ['Zephyr','Bright','f'],['Puck','Upbeat','m'],['Laomedeia','Upbeat','f'],['Fenrir','Excitable','m'],
+  ['Leda','Youthful','f'],['Enceladus','Breathy','m'],['Algenib','Gravelly','m'],['Pulcherrima','Forward','f'],
+  ['Zubenelgenubi','Casual','m'],['Sadachbia','Lively','f'],
+];
+const STYLES = {
+  calm: 'Read the following text aloud exactly as written, in a calm, clear, measured narrator voice suitable for an audiobook. Do not add or skip anything.',
+  warm: 'Read the following text aloud exactly as written, in a warm, friendly, natural voice. Do not add or skip anything.',
+  lively: 'Read the following text aloud exactly as written, in a lively, engaging voice. Do not add or skip anything.',
+  none: ''
+};
+const FALLBACK_MODELS = ['gemini-3.1-flash-tts-preview','gemini-2.5-flash-preview-tts','gemini-2.5-pro-preview-tts'];
+
+// ---------- Settings storage ----------
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem('ra_' + k); return v == null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ra_' + k, v); } catch {} },
+  del(k) { try { localStorage.removeItem('ra_' + k); } catch {} },
+};
+let voice = ls.get('voice', 'Charon');
+
+// ---------- IndexedDB ----------
+let dbp = null;
+function db() {
+  if (dbp) return dbp;
+  dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('readaloud', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('docs', { keyPath: 'id' });
+      d.createObjectStore('audio'); // key: docId + ':' + index
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbp;
+}
+async function tx(store, mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction(store, mode); const s = t.objectStore(store);
+    let out; Promise.resolve(fn(s)).then(v => out = v);
+    t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const putDoc = (doc) => tx('docs', 'readwrite', s => s.put(doc));
+const getDoc = async (id) => { const d = await db(); return req(d.transaction('docs').objectStore('docs').get(id)); };
+const allDocs = async () => { const d = await db(); return req(d.transaction('docs').objectStore('docs').getAll()); };
+const putAudio = (k, blob) => tx('audio', 'readwrite', s => s.put(blob, k));
+const getAudio = async (k) => { const d = await db(); return req(d.transaction('audio').objectStore('audio').get(k)); };
+async function delDoc(doc) {
+  await tx('audio', 'readwrite', s => { for (let i = 0; i < doc.chunks.length; i++) s.delete(doc.id + ':' + i); });
+  await tx('docs', 'readwrite', s => s.delete(doc.id));
+}
+
+// ---------- Text cleaning & chunking ----------
+function cleanText(t) {
+  t = t.replace(/\r/g, '');
+  t = t.replace(/(\w)-\n(\w)/g, '$1$2');                 // hyphenated line breaks
+  t = t.replace(/([^\n])\n(?!\n)/g, '$1 ');               // single newlines -> space
+  if ($('optCut').checked) {
+    const m = t.match(/\n\s*(references|bibliography|reference list|works cited|literatura|bibliografia)\s*\n/i);
+    if (m && m.index > t.length * 0.4) t = t.slice(0, m.index);
+  }
+  if ($('optUrls').checked) {
+    t = t.replace(/https?:\/\/\S+/g, '').replace(/\bdoi:\s*\S+/gi, '').replace(/\b10\.\d{4,9}\/\S+/g, '');
+  }
+  if ($('optRefs').checked) {
+    t = t.replace(/\s?\[\s*\d+(?:\s*[-–,]\s*\d+)*\s*\]/g, '');
+    t = t.replace(/\s?\((?:[A-Z][A-Za-z'’\-]+(?:\s(?:et al\.|&|and)\s?[A-Z]?[A-Za-z'’\-]*)*,?\s\d{4}[a-z]?(?:;\s*)?)+\)/g, '');
+  }
+  t = t.replace(/[ \t]+/g, ' ').replace(/ +([.,;:])/g, '$1').replace(/\n{3,}/g, '\n\n');
+  return t.trim();
+}
+function splitSentences(p) {
+  return p.match(/[^.!?…]+(?:[.!?…]+["'”’)]*\s*|$)/g) || [p];
+}
+function chunkText(t, max) {
+  const paras = t.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  const out = []; let cur = '';
+  const push = () => { if (cur.trim()) out.push(cur.trim()); cur = ''; };
+  for (const p of paras) {
+    if (p.length > max) {
+      for (const s of splitSentences(p)) {
+        if ((cur + ' ' + s).length > max) push();
+        cur += (cur ? ' ' : '') + s;
+      }
+      cur += '\n\n';
+    } else {
+      if ((cur + '\n\n' + p).length > max) push();
+      cur += (cur ? '\n\n' : '') + p;
+    }
+  }
+  push();
+  return out;
+}
+
+// ---------- PCM -> WAV ----------
+function b64ToBytes(b64) { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+function pcmToWav(pcm, rate) {
+  const h = new ArrayBuffer(44), v = new DataView(h);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, pcm.length, true);
+  return new Blob([h, pcm], { type: 'audio/wav' });
+}
+
+// ---------- Gemini calls ----------
+class QuotaError extends Error { constructor(msg, wait, daily) { super(msg); this.wait = wait; this.daily = daily; } }
+function getKey() { return ls.get('key', ''); }
+function getModel() { return ls.get('model', '') || FALLBACK_MODELS[0]; }
+
+async function tts(text, voiceName, style) {
+  const key = getKey(); if (!key) throw new Error('Add your API key in Settings first.');
+  const instr = STYLES[style] || '';
+  const body = {
+    contents: [{ parts: [{ text: instr ? instr + '\n\n' + text : text }] }],
+    generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } }
+  };
+  const models = [getModel(), ...FALLBACK_MODELS.filter(m => m !== getModel())];
+  let lastErr;
+  for (const model of models) {
+    const r = await fetch(`${API}/models/${model}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      const j = await r.json();
+      const part = (j.candidates?.[0]?.content?.parts || []).find(p => p.inlineData);
+      if (!part) throw new Error('Gemini returned no audio for this part. Try again, or try another voice.');
+      const rate = +((part.inlineData.mimeType || '').match(/rate=(\d+)/)?.[1] || 24000);
+      if (model !== getModel()) { ls.set('model', model); fillModels(); }
+      return pcmToWav(b64ToBytes(part.inlineData.data), rate);
+    }
+    let j = {}; try { j = await r.json(); } catch {}
+    const msg = j.error?.message || ('HTTP ' + r.status);
+    if (r.status === 429) {
+      const ri = (j.error?.details || []).find(d => (d['@type'] || '').includes('RetryInfo'));
+      const wait = ri ? parseFloat(ri.retryDelay) : 30;
+      const daily = /per ?day|PerDay|daily/i.test(JSON.stringify(j));
+      throw new QuotaError(msg, isFinite(wait) ? wait : 30, daily);
+    }
+    if (r.status === 400 && /api key/i.test(msg)) throw new Error('Your API key was rejected. Check it in Settings.');
+    if (r.status === 403) throw new Error('Access denied: ' + msg);
+    if (r.status === 404 || (r.status === 400 && /model|modalit/i.test(msg))) { lastErr = new Error(msg); continue; }
+    throw new Error(msg);
+  }
+  throw lastErr || new Error('No voice model worked. Test your key in Settings.');
+}
+
+async function detectModels() {
+  const key = getKey();
+  const r = await fetch(`${API}/models?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
+  let j = {}; try { j = await r.json(); } catch {}
+  if (!r.ok) throw new Error(j.error?.message || ('HTTP ' + r.status));
+  const tts = (j.models || []).map(m => m.name.replace(/^models\//, '')).filter(n => /tts/i.test(n));
+  const score = (n) => {
+    const v = parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+    return v * 10 + (/flash/.test(n) && !/lite/.test(n) ? 3 : /lite/.test(n) ? 1 : 0) - (/pro/.test(n) ? 2 : 0);
+  };
+  tts.sort((a, b) => score(b) - score(a));
+  return tts;
+}
+
+// ---------- UI: tabs ----------
+function showTab(name) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  ['new', 'lib', 'now', 'set'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+  if (name === 'lib') renderLib();
+  if (name === 'set') storageInfo();
+  try { window.scrollTo(0, 0); } catch {}
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------- UI: voices ----------
+const previewCache = {};
+let previewAudio = new Audio();
+function renderVoices() {
+  const box = $('voices'); box.innerHTML = '';
+  for (const [name, desc, g] of VOICES) {
+    const b = document.createElement('button'); b.className = 'voice' + (name === voice ? ' on' : '');
+    b.innerHTML = `<span><b>${name}</b><i>${desc} · ${g === 'f' ? 'female' : 'male'}</i></span>`;
+    const pv = document.createElement('span'); pv.className = 'pv'; pv.textContent = '▶'; pv.setAttribute('role', 'button');
+    pv.title = 'Hear a sample';
+    pv.onclick = async (e) => {
+      e.stopPropagation();
+      if (!getKey()) { showTab('set'); return; }
+      try {
+        pv.innerHTML = '<span class="spin"></span>';
+        if (!previewCache[name]) previewCache[name] = URL.createObjectURL(await tts(
+          `Hello, my name is ${name}. I can read your articles and books aloud, at whatever speed you like.`, name, $('style').value));
+        previewAudio.src = previewCache[name]; previewAudio.playbackRate = +$('speed').value;
+        await previewAudio.play();
+      } catch (err) { $('goErr').textContent = niceErr(err); }
+      finally { pv.textContent = '▶'; }
+    };
+    b.appendChild(pv);
+    b.onclick = () => { voice = name; ls.set('voice', name); renderVoices(); };
+    box.appendChild(b);
+  }
+}
+$('style').value = ls.get('style', 'calm');
+$('style').onchange = () => { ls.set('style', $('style').value); for (const k in previewCache) delete previewCache[k]; };
+
+// ---------- UI: new doc ----------
+function updateCount() {
+  if (!$('text').value.trim()) { $('count').textContent = ''; return; }
+  const cleaned = cleanText($('text').value); const n = cleaned.length;
+  const words = cleaned.split(/\s+/).length;
+  const mins = Math.round(words / 150);
+  const parts = chunkText(cleaned, +ls.get('chunk', 3000)).length;
+  $('count').textContent = `${words.toLocaleString()} words · about ${mins || '<1'} min of listening · roughly ${parts} part${parts > 1 ? 's' : ''}`;
+}
+$('text').addEventListener('input', updateCount);
+document.querySelectorAll('details input').forEach(c => c.onchange = updateCount);
+$('pickFile').onclick = () => $('file').click();
+
+let pdfjsLoading = null;
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (pdfjsLoading) return pdfjsLoading;
+  pdfjsLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(window.pdfjsLib); };
+    s.onerror = () => { pdfjsLoading = null; rej(new Error('Could not load the PDF reader. Check your internet connection.')); };
+    document.head.appendChild(s);
+  });
+  return pdfjsLoading;
+}
+async function pdfToText(file) {
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    $('fileMsg').textContent = `Reading page ${i} of ${pdf.numPages}…`;
+    const c = await (await pdf.getPage(i)).getTextContent();
+    let out = '', lastY = null;
+    for (const it of c.items) {
+      const y = it.transform ? it.transform[5] : null;
+      if (lastY !== null && y !== null && Math.abs(y - lastY) > 1) out += (Math.abs(y - lastY) > (it.height || 10) * 1.6 ? '\n\n' : '\n');
+      out += it.str; if (it.hasEOL) out += '\n'; lastY = y;
+    }
+    pages.push(out);
+  }
+  return { text: pages.join('\n\n'), title: (await pdf.getMetadata().catch(() => ({})))?.info?.Title || '' };
+}
+$('file').onchange = async () => {
+  const f = $('file').files[0]; if (!f) return;
+  $('fileMsg').textContent = 'Opening…';
+  try {
+    let text, title = '';
+    if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) ({ text, title } = await pdfToText(f));
+    else text = await f.text();
+    $('text').value = text;
+    if (!$('title').value) $('title').value = (title && title.length > 3 ? title : f.name.replace(/\.[^.]+$/, ''));
+    $('fileMsg').textContent = text.trim() ? 'Loaded. Check the text below.' : 'No text found. A scanned PDF has no text layer.';
+    updateCount();
+  } catch (e) { $('fileMsg').textContent = niceErr(e); }
+  $('file').value = '';
+};
+
+$('go').onclick = async () => {
+  $('goErr').textContent = '';
+  if (!getKey()) { showTab('set'); return; }
+  const raw = $('text').value.trim();
+  if (!raw) { $('goErr').textContent = 'Paste some text or open a file first.'; return; }
+  const text = cleanText(raw);
+  const chunks = chunkText(text, +ls.get('chunk', 3000));
+  const title = $('title').value.trim() || text.slice(0, 60).replace(/\s+\S*$/, '') + '…';
+  const doc = { id: 'd' + Date.now().toString(36), title, chunks, voice, style: $('style').value,
+    ready: chunks.map(() => false), pos: { i: 0, t: 0 }, created: Date.now() };
+  await putDoc(doc);
+  $('text').value = ''; $('title').value = ''; updateCount();
+  await openDoc(doc.id, true);
+};
+
+// ---------- Library ----------
+async function renderLib() {
+  const docs = (await allDocs()).sort((a, b) => (b.opened || b.created) - (a.opened || a.created));
+  const box = $('libList'); box.innerHTML = '';
+  if (!docs.length) { box.innerHTML = '<p class="muted">Nothing here yet. Create something in New.</p>'; return; }
+  for (const d of docs) {
+    const nReady = d.ready.filter(Boolean).length, n = d.chunks.length;
+    const el = document.createElement('div'); el.className = 'doc';
+    el.innerHTML = `<div class="t"><b></b><span class="muted small">${d.voice} · part ${Math.min(d.pos.i + 1, n)} of ${n} · ${nReady}/${n} ready</span>
+      <div class="bar"><div class="gen" style="width:${100 * nReady / n}%"></div><div class="pl" style="width:${100 * d.pos.i / n}%"></div></div></div>`;
+    el.querySelector('b').textContent = d.title;
+    const open = document.createElement('button'); open.textContent = 'Open'; open.onclick = () => openDoc(d.id, false);
+    const del = document.createElement('button'); del.className = 'ghost danger'; del.textContent = '✕'; del.title = 'Delete';
+    del.onclick = async () => {
+      if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Delete?'; return; }
+      if (cur && cur.id === d.id) { stopAll(); cur = null; $('dock').classList.add('hidden'); }
+      await delDoc(d); renderLib();
+    };
+    el.append(open, del); box.appendChild(el);
+  }
+}
+
+// ---------- Player ----------
+const audio = $('audio');
+let cur = null;           // current doc
+let curUrl = null;
+let wantPlay = false;
+let genRunning = false, genStopAll = false, genAllMode = false;
+const AHEAD = 2;          // parts to prepare ahead of the one playing
+
+function niceErr(e) {
+  if (e instanceof QuotaError) return e.daily
+    ? 'You have used today\'s free allowance for the voice model. Parts already prepared still play. Try again tomorrow.'
+    : 'Free tier limit reached for now. Waiting a moment…';
+  if (e && e.name === 'TypeError' && /fetch|network|load/i.test(e.message)) return 'No connection to Gemini. Check your internet.';
+  return (e && e.message) || String(e);
+}
+function status(msg, spin) { $('dStatus').innerHTML = (spin ? '<span class="spin"></span>' : '') + msg; }
+
+async function openDoc(id, autoplay) {
+  stopAll();
+  cur = await getDoc(id); if (!cur) return;
+  cur.opened = Date.now(); putDoc(cur);
+  $('dock').classList.remove('hidden');
+  $('dTitle').textContent = cur.title;
+  renderReading();
+  showTab('now');
+  wantPlay = !!autoplay;
+  await loadPart(cur.pos.i, cur.pos.t);
+  pump();
+}
+function renderReading() {
+  $('nowTitle').textContent = cur.title;
+  $('nowMeta').textContent = `${cur.voice} · ${cur.chunks.length} parts`;
+  const box = $('reading'); box.innerHTML = '';
+  cur.chunks.forEach((c, i) => {
+    const p = document.createElement('p'); p.textContent = c.length > 600 ? c.slice(0, 600) + ' …' : c;
+    p.dataset.i = i; p.onclick = () => { wantPlay = true; loadPart(i, 0); pump(); };
+    box.appendChild(p);
+  });
+  markReading();
+}
+function markReading() {
+  if (!cur) return;
+  document.querySelectorAll('#reading p').forEach(p => {
+    const i = +p.dataset.i;
+    p.classList.toggle('cur', i === cur.pos.i); p.classList.toggle('ready', !!cur.ready[i]);
+  });
+  const c = document.querySelector('#reading p.cur');
+  if (c && !$('tab-now').classList.contains('hidden')) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+async function loadPart(i, t) {
+  if (!cur) return;
+  if (i < 0) i = 0;
+  if (i >= cur.chunks.length) { // finished
+    wantPlay = false; setPlayBtn(); status('Finished ✓'); cur.pos = { i: cur.chunks.length - 1, t: 0 }; putDoc(cur); return;
+  }
+  cur.pos = { i, t: t || 0 }; putDoc(cur); markReading();
+  updateMediaSession();
+  const blob = cur.ready[i] ? await getAudio(cur.id + ':' + i) : null;
+  if (!blob) { cur.ready[i] = false; audio.removeAttribute('src'); try { audio.load(); } catch {} status(`Preparing part ${i + 1} of ${cur.chunks.length}…`, true); setPlayBtn(); return; }
+  if (curUrl) URL.revokeObjectURL(curUrl);
+  curUrl = URL.createObjectURL(blob);
+  audio.src = curUrl;
+  audio.playbackRate = +$('speed').value; audio.defaultPlaybackRate = +$('speed').value;
+  try { audio.preservesPitch = true; } catch {}
+  await new Promise(r => { if (audio.readyState >= 1) r(); else { audio.onloadedmetadata = r; setTimeout(r, 1500); } });
+  if (t) try { audio.currentTime = Math.min(t, (audio.duration || t) - 0.2); } catch {}
+  status(`Part ${i + 1} of ${cur.chunks.length}`);
+  if (wantPlay) { try { await audio.play(); } catch { wantPlay = false; } }
+  setPlayBtn();
+}
+
+// background generation: keeps parts ready ahead of playback
+async function pump() {
+  if (genRunning || !cur) return;
+  genRunning = true; genStopAll = false;
+  const doc = cur;
+  try {
+    while (cur === doc && !genStopAll) {
+      const start = doc.pos.i;
+      const limit = genAllMode ? doc.chunks.length : Math.min(doc.chunks.length, start + 1 + AHEAD);
+      let next = -1;
+      for (let i = start; i < limit; i++) if (!doc.ready[i]) { next = i; break; }
+      if (next < 0) break;
+      try {
+        const blob = await tts(doc.chunks[next], doc.voice, doc.style);
+        await putAudio(doc.id + ':' + next, blob);
+        doc.ready[next] = true; await putDoc(doc); markReading();
+        if (cur === doc && next === doc.pos.i && !audio.src) await loadPart(next, doc.pos.t);
+        else if (genAllMode) status(`Prepared ${doc.ready.filter(Boolean).length} of ${doc.chunks.length} parts`, true);
+      } catch (e) {
+        if (e instanceof QuotaError && !e.daily) {
+          const wait = Math.ceil(Math.min(Math.max(e.wait, 5), 120));
+          for (let s = wait; s > 0 && !genStopAll && cur === doc; s--) {
+            if (!audio.src || audio.paused) status(`Free-tier speed limit: next part in ${s}s…`, true);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          continue;
+        }
+        status(niceErr(e)); $('goErr').textContent = niceErr(e);
+        break;
+      }
+    }
+  } finally {
+    genRunning = false;
+    if (genAllMode) { genAllMode = false; $('genAll').classList.remove('hidden'); $('stopGen').classList.add('hidden');
+      if (cur === doc && doc.ready.every(Boolean)) status('All parts ready. You can listen offline now.'); }
+  }
+}
+function stopAll() { genStopAll = true; wantPlay = false; try { audio.pause(); } catch {} }
+
+function setPlayBtn() {
+  const playing = !audio.paused && !!audio.src;
+  $('bPlay').textContent = playing ? '❚❚' : '▶';
+  $('bPlay').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+}
+$('bPlay').onclick = async () => {
+  if (!cur) return;
+  if (!audio.paused) { wantPlay = false; audio.pause(); return; }
+  wantPlay = true;
+  if (audio.src) { audio.playbackRate = +$('speed').value; try { await audio.play(); } catch {} }
+  else { await loadPart(cur.pos.i, cur.pos.t); pump(); }
+  setPlayBtn();
+};
+$('bBack').onclick = () => { if (audio.src) audio.currentTime = Math.max(0, audio.currentTime - 15); };
+$('bFwd').onclick = () => { if (audio.src && audio.duration) { if (audio.currentTime + 30 >= audio.duration) $('bNext').onclick(); else audio.currentTime += 30; } };
+$('bPrev').onclick = () => { if (!cur) return; if (audio.currentTime > 4) audio.currentTime = 0; else { loadPart(cur.pos.i - 1, 0); pump(); } };
+$('bNext').onclick = () => { if (!cur) return; loadPart(cur.pos.i + 1, 0); pump(); };
+$('speed').value = ls.get('speed', '1');
+$('speed').onchange = () => { audio.playbackRate = +$('speed').value; audio.defaultPlaybackRate = +$('speed').value; ls.set('speed', $('speed').value); };
+audio.onended = () => { if (!cur) return; wantPlay = true; loadPart(cur.pos.i + 1, 0); pump(); };
+audio.onplay = audio.onpause = () => { setPlayBtn(); };
+audio.onratechange = () => { if (audio.src && Math.abs(audio.playbackRate - +$('speed').value) > 0.01 && !audio.paused) audio.playbackRate = +$('speed').value; };
+let lastSave = 0;
+audio.ontimeupdate = () => {
+  if (!audio.duration) return;
+  if (!seeking) $('seek').value = Math.round(1000 * audio.currentTime / audio.duration);
+  if (cur && Date.now() - lastSave > 4000) { lastSave = Date.now(); cur.pos.t = audio.currentTime; putDoc(cur); }
+  const left = Math.max(0, audio.duration - audio.currentTime);
+  status(`Part ${cur.pos.i + 1} of ${cur.chunks.length} · ${fmt(audio.currentTime)} / ${fmt(audio.duration)}`);
+};
+let seeking = false;
+$('seek').oninput = () => { seeking = true; };
+$('seek').onchange = () => { seeking = false; if (audio.duration) audio.currentTime = audio.duration * $('seek').value / 1000; };
+function fmt(s) { s = Math.floor(s || 0); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+$('genAll').onclick = () => { if (!cur) return; genAllMode = true; $('genAll').classList.add('hidden'); $('stopGen').classList.remove('hidden');
+  if (genRunning) { /* existing loop will pick up genAllMode */ } else pump(); };
+$('stopGen').onclick = () => { genAllMode = false; $('genAll').classList.remove('hidden'); $('stopGen').classList.add('hidden'); };
+
+function updateMediaSession() {
+  if (!('mediaSession' in navigator) || !cur) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: cur.title, artist: `${cur.voice} · part ${cur.pos.i + 1}/${cur.chunks.length}`, album: 'ReadAloud' });
+    navigator.mediaSession.setActionHandler('play', () => $('bPlay').onclick());
+    navigator.mediaSession.setActionHandler('pause', () => { wantPlay = false; audio.pause(); });
+    navigator.mediaSession.setActionHandler('seekbackward', () => $('bBack').onclick());
+    navigator.mediaSession.setActionHandler('seekforward', () => $('bFwd').onclick());
+    navigator.mediaSession.setActionHandler('previoustrack', () => $('bPrev').onclick());
+    navigator.mediaSession.setActionHandler('nexttrack', () => $('bNext').onclick());
+  } catch {}
+}
+
+// ---------- Settings ----------
+function keyBadge() {
+  const k = getKey();
+  $('keyBadge').textContent = k ? '● key saved' : 'no key yet';
+  $('keyBadge').style.color = k ? 'var(--ok)' : 'var(--muted)';
+  $('needKey').classList.toggle('hidden', !!k);
+}
+function fillModels(list) {
+  const known = list || JSON.parse(ls.get('models', '[]'));
+  const all = [...new Set([getModel(), ...known, ...FALLBACK_MODELS])];
+  $('model').innerHTML = all.map(m => `<option value="${m}">${m}</option>`).join('');
+  $('model').value = getModel();
+}
+$('model').onchange = () => ls.set('model', $('model').value);
+$('chunk').value = ls.get('chunk', '3000');
+$('chunk').onchange = () => { ls.set('chunk', $('chunk').value); updateCount(); };
+$('key').value = getKey();
+$('showKey').onclick = () => { const k = $('key'); k.type = k.type === 'password' ? 'text' : 'password'; $('showKey').textContent = k.type === 'password' ? 'Show' : 'Hide'; };
+$('clearKey').onclick = () => { ls.del('key'); $('key').value = ''; keyBadge(); $('keyMsg').innerHTML = '<span class="muted">Key removed from this device.</span>'; };
+$('saveKey').onclick = async () => {
+  const k = $('key').value.trim();
+  if (!k) { $('keyMsg').innerHTML = '<span class="err">Paste a key first.</span>'; return; }
+  ls.set('key', k); keyBadge();
+  $('keyMsg').innerHTML = '<span class="muted"><span class="spin"></span>Testing…</span>';
+  try {
+    const list = await detectModels();
+    if (!list.length) throw new Error('Key works, but no voice (TTS) models are available to it.');
+    ls.set('models', JSON.stringify(list));
+    if (!list.includes(ls.get('model', ''))) ls.set('model', list[0]);
+    fillModels(list);
+    $('keyMsg').innerHTML = `<span class="okc">✓ Key works. Using ${getModel()}.</span>`;
+  } catch (e) {
+    $('keyMsg').innerHTML = `<span class="err">${niceErr(e).replace(/</g, '&lt;')}</span>`;
+  }
+};
+async function storageInfo() {
+  const docs = await allDocs();
+  let parts = 0; docs.forEach(d => parts += d.ready.filter(Boolean).length);
+  let extra = '';
+  try { const e = await navigator.storage.estimate(); extra = ` · about ${Math.round((e.usage || 0) / 1048576)} MB used`; } catch {}
+  $('storeMsg').textContent = `${docs.length} item${docs.length === 1 ? '' : 's'}, ${parts} prepared part${parts === 1 ? '' : 's'}${extra}.`;
+}
+$('wipe').onclick = async () => {
+  if ($('wipe').dataset.sure !== '1') { $('wipe').dataset.sure = '1'; $('wipe').textContent = 'Tap again to delete everything'; return; }
+  stopAll(); cur = null; $('dock').classList.add('hidden');
+  for (const d of await allDocs()) await delDoc(d);
+  $('wipe').dataset.sure = ''; $('wipe').textContent = 'Delete all saved audio'; storageInfo();
+};
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+
+// ---------- Boot ----------
+renderVoices(); fillModels(); keyBadge(); updateCount();
+(async () => {
+  try {
+    const docs = (await allDocs()).sort((a, b) => (b.opened || 0) - (a.opened || 0));
+    if (docs[0] && docs[0].opened) {
+      cur = docs[0]; $('dock').classList.remove('hidden'); $('dTitle').textContent = cur.title; renderReading();
+      await loadPart(cur.pos.i, cur.pos.t); status(`Part ${cur.pos.i + 1} of ${cur.chunks.length} · tap ▶ to resume`);
+    }
+  } catch (e) { console.error(e); }
+  if (!getKey()) showTab('set');
+})();
+})();
+</script>
+</body>
+</html>
